@@ -6,6 +6,11 @@ Automated Installation and Configuration of Kubernetes (K8s) on Raspberry Pi
     * Here's a handy walkthrough, from Canonical: [How to install Ubuntu Server on your Raspberry Pi](https://ubuntu.com/tutorials/how-to-install-ubuntu-on-your-raspberry-pi#1-overview)
 * [Ansible](https://docs.ansible.com/ansible/latest/user_guide/index.html#getting-started) 2.5.x >= 2.9.x
 
+## Notes
+* Tested using MacOS Big Sur as the Ansible control machine, with Python 3.9
+* This may work with other versions of Ubuntu, but I have only tested on Ubuntu 20.04.2 LTS
+* I defaulted to [Flannel](https://github.com/coreos/flannel#flannel) as the [CNI plugin](https://kubernetes.io/docs/concepts/cluster-administration/networking/), but you can override this with the `pod_network_yaml` variable when running the `kube_cluster_config.yml` playbook
+
 ## Directions
 
 1. Clone this repository to your computer
