@@ -2,7 +2,7 @@
 Automated Installation and Configuration of Kubernetes (K8s) on Raspberry Pi
 
 ## Prerequisites
-* Raspberry Pi boards with a minimum of 2 GiB RAM, preconfigured with Ubuntu (20.04) and on your network
+* Raspberry Pi boards with a minimum of 2 GiB RAM, preconfigured with Ubuntu (20.04) and connected to your network
 * Ansible 2.5.x >= 2.9.x
 
 ## Directions
@@ -23,4 +23,4 @@ Automated Installation and Configuration of Kubernetes (K8s) on Raspberry Pi
 The Ansible playbooks were based on these posts:
 
 * [Installing Kubernetes on Raspberry Pi](https://uthark.github.io/post/2020-09-02-installing-kubernetes-raspberrypi/)
-* [https://opensource.com/article/20/6/kubernetes-raspberry-pi#comments](https://opensource.com/article/20/6/kubernetes-raspberry-pi)
+* [Build a Kubernetes cluster with the Raspberry Pi](https://opensource.com/article/20/6/kubernetes-raspberry-pi)
