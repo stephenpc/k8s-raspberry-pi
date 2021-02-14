@@ -17,7 +17,11 @@ Automated Installation and Configuration of Kubernetes (K8s) on Raspberry Pi
     ```
     ansible-playbook -i inventory kube_cluster_config.yml -v
     ```
-
+1. Verify that the cluster is healthy
+    ```
+    ansible-playbook -i inventory kube_cluster_verify.yml -v
+    ```
+    
 ## Special Thanks
 
 The Ansible playbooks were based on these posts:
