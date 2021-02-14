@@ -1,0 +1,135 @@
+---
+- name: install kubernetes cluster
+  hosts: kubecluster
+  become: yes
+  gather_facts: yes
+
+  vars:
+    docker_cgroup_driver: systemd
+    docker_log_max_size: 100m
+    docker_log_driver: json-file
+    docker_storage_driver: overlay2
+    hold_k8s_packages: yes
+
+  handlers:
+    - name: restart
+      reboot:
+        reboot_timeout: 300
+        msg: rebooting so that changes take effect. please wait.
+
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+
+  tasks:
+    - debug:
+        var: inventory_hostname
+      tags: 
+        - hostname
+
+    - name: set hostname
+      hostname:
+        name: "{{ inventory_hostname }}"
+      notify: restart
+      tags:
+        - hostname
+
+    - name: enable cgroups
+      lineinfile:
+        path: /boot/firmware/cmdline.txt
+        regexp: '^(.*) rootwait fixrtc'
+        line: '\1 rootwait fixrtc cgroup_enable=memory swapaccount=1 cgroup_memory=1 cgroup_enable=cpuset'
+        backrefs: yes
+      notify: restart
+
+    - name: update packages
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    - name: install supporting packages
+      apt:
+        name: 
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+          - net-tools
+          - traceroute
+        state: present
+
+    - name: master packages
+      block:
+        - name: install pip
+          apt:
+            name: 
+              - python3-pip
+            state: present
+
+        - name: ensure supporting python packages are installed
+          pip:
+            name:
+              - openshift
+              - pyyaml
+      when: node_type == "master"
+
+    - name: add gpg keys
+      apt_key:
+        url: "{{ item }}"
+      loop:
+       - https://download.docker.com/linux/ubuntu/gpg
+       - https://packages.cloud.google.com/apt/doc/apt-key.gpg
+
+    - name: add docker and k8s repositories
+      apt_repository:
+        repo: "{{ item }}"
+        state: present
+      loop:
+        - deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        - deb https://apt.kubernetes.io kubernetes-xenial main
+
+    - name: install docker and k8s
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    - name: configure docker daemon
+      template:
+        src: daemon.json.j2
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: docker
+        mode: '0664'
+      notify: restart docker
+
+    - name: allow iptables to see bridged traffic
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_file: /etc/sysctl.d/k8s.conf
+        reload: yes
+      loop:
+        - name: net.bridge.bridge-nf-call-ip6tables
+          value: 1
+        - name: net.bridge.bridge-nf-call-iptables
+          value: 1
+    
+    - name: check to see what packages are marked as held
+      command: apt-mark showhold
+      register: apt_mark
+      changed_when: no
+
+    - name: mark k8s packages as held
+      command: apt-mark hold kubelet kubeadm kubectl
+      when: (hold_k8s_packages | bool) and (apt_mark.stdout.find('kube') == -1)

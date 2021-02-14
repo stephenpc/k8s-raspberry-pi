@@ -1,0 +1,21 @@
+[kubecluster:children]
+kubemaster
+kubenodes
+
+[kubemaster]
+k8snode-10     ansible_host=192.168.0.10
+
+[kubemaster:vars]
+ansible_user=ubuntu
+node_type=master
+
+[kubenodes]
+k8snode-21     ansible_host=192.168.0.21
+k8snode-22     ansible_host=192.168.0.22
+k8snode-23     ansible_host=192.168.0.23
+k8snode-24     ansible_host=192.168.0.24
+k8snode-25     ansible_host=192.168.0.25
+
+[kubenodes:vars]
+ansible_user=ubuntu
+node_type=node

@@ -1,0 +1,71 @@
+---
+- name: configure kubernetes master
+  hosts: kubemaster
+  become: yes
+  gather_facts: yes
+
+  vars:
+    reset_first: false
+    pod_cidr: 10.1.0.0/16
+    pod_network_yaml:  https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+  tasks:
+    - name: reset config
+      block:
+        - name: reset via kubeadm
+          command: kubeadm reset -f
+
+        - name: clean up cni config
+          file:
+            state: absent
+            path: /etc/cni/net.d
+      when: reset_first | bool
+      tags:
+        - clean
+
+    - name: generate token
+      command: kubeadm token generate
+      register: kubeadm_token
+
+    - name: initialize control plane
+      command: kubeadm init --token={{ kubeadm_token.stdout }} --pod-network-cidr={{ pod_cidr }} --ignore-preflight-errors=mem
+
+    - name: set profile to load k8s config
+      lineinfile:
+        path: "{{ ansible_user_dir }}/.bashrc"
+        line: 'export KUBECONFIG=/etc/kubernetes/admin.conf'
+        state: present
+
+    - name: deploy pod network
+      command: kubectl apply -f {{ pod_network_yaml }}
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: configure kubernetes nodes
+  hosts: kubecluster
+  become: yes
+  gather_facts: yes
+
+  vars:
+    reset_first: false
+
+  tasks:
+    - name: get additional token and join command
+      command: kubeadm token create --print-join-command
+      register: kubeadm_join
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      delegate_to: "{{ groups['kubemaster'][0] }}"
+      run_once: yes
+
+    - name: node config
+      block:
+      - name: reset via kubeadm
+        command: kubeadm reset -f
+        when: reset_first | bool
+        tags:
+          - clean
+
+      - name: join node to cluster
+        command: "{{ kubeadm_join.stdout }}"
+      when: node_type == "node"

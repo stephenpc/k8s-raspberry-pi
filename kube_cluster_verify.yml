@@ -1,0 +1,12 @@
+---
+- name: verify kubernetes cluster
+  hosts: kubemaster
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: get kube nodes
+      k8s_info:
+        kind: nodes
+        kubeconfig: /etc/kubernetes/admin.conf
+      register: kube_nodes
